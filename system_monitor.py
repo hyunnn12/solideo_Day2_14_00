@@ -745,7 +745,7 @@ class PDFReportGenerator:
         plt.close()
 
 
-def run_monitoring(duration: int, interval: float, output_path: str) -> None:
+def run_monitoring(duration: int, interval: float, output_path: str, no_gui: bool = False) -> None:
     """
     Main function to run the monitoring process.
 
@@ -753,6 +753,7 @@ def run_monitoring(duration: int, interval: float, output_path: str) -> None:
         duration: Total monitoring duration in seconds
         interval: Sampling interval in seconds
         output_path: Path to save the PDF report
+        no_gui: If True, run without GUI (headless mode)
     """
     print("=" * 80)
     print("🖥️  SYSTEM RESOURCE MONITORING APPLICATION")
@@ -763,6 +764,7 @@ def run_monitoring(duration: int, interval: float, output_path: str) -> None:
     print(f"💻 Platform: {platform.system()} {platform.release()}")
     print(f"🔧 Python: {platform.python_version()}")
     print(f"🎮 GPU monitoring: {'Enabled' if GPU_AVAILABLE else 'Disabled'}")
+    print(f"🖥️  GUI mode: {'Disabled (headless)' if no_gui else 'Enabled'}")
     print("=" * 80)
     print("\n🚀 Starting monitoring...\n")
 
@@ -770,53 +772,83 @@ def run_monitoring(duration: int, interval: float, output_path: str) -> None:
     monitor = SystemMonitor(duration_seconds=duration, interval_seconds=interval)
     monitor.start_time = datetime.datetime.now()
 
-    # Initialize plotter
-    plotter = RealTimePlotter(monitor)
-
     # Collection state
-    collection_complete = False
     samples_collected = 0
     total_samples = int(duration / interval)
 
-    def collect_data(frame):
-        """Data collection function for animation."""
-        nonlocal collection_complete, samples_collected
+    if no_gui:
+        # Headless mode: Simple loop without GUI
+        start_time = time.time()
 
-        if collection_complete:
-            return
+        try:
+            while True:
+                elapsed = time.time() - start_time
 
-        elapsed = time.time() - start_time
+                if elapsed >= duration:
+                    break
 
-        if elapsed >= duration:
-            collection_complete = True
-            print(f"\n✅ Monitoring complete! Collected {samples_collected} samples.")
-            return
+                # Collect sample
+                monitor.collect_sample()
+                samples_collected += 1
 
-        # Collect sample
-        monitor.collect_sample()
-        samples_collected += 1
+                # Progress indicator
+                progress = (elapsed / duration) * 100
+                print(f"\r⏳ Progress: {progress:.1f}% | Samples: {samples_collected}/{total_samples} | "
+                      f"Time: {elapsed:.0f}/{duration}s", end='', flush=True)
 
-        # Progress indicator
-        progress = (elapsed / duration) * 100
-        print(f"\r⏳ Progress: {progress:.1f}% | Samples: {samples_collected}/{total_samples} | "
-              f"Time: {elapsed:.0f}/{duration}s", end='', flush=True)
+                # Sleep until next interval
+                time.sleep(interval)
 
-    # Start collection
-    start_time = time.time()
+        except KeyboardInterrupt:
+            print("\n\n⚠️  Monitoring interrupted by user.")
 
-    # Create animation
-    anim = animation.FuncAnimation(
-        plotter.fig,
-        lambda frame: [collect_data(frame)] + plotter.update(frame),
-        interval=interval * 1000,  # Convert to milliseconds
-        blit=False,
-        cache_frame_data=False
-    )
+        print(f"\n✅ Monitoring complete! Collected {samples_collected} samples.")
 
-    try:
-        plt.show()
-    except KeyboardInterrupt:
-        print("\n\n⚠️  Monitoring interrupted by user.")
+    else:
+        # GUI mode: Use animation
+        # Initialize plotter
+        plotter = RealTimePlotter(monitor)
+        collection_complete = False
+
+        def collect_data(frame):
+            """Data collection function for animation."""
+            nonlocal collection_complete, samples_collected
+
+            if collection_complete:
+                return
+
+            elapsed = time.time() - start_time
+
+            if elapsed >= duration:
+                collection_complete = True
+                print(f"\n✅ Monitoring complete! Collected {samples_collected} samples.")
+                return
+
+            # Collect sample
+            monitor.collect_sample()
+            samples_collected += 1
+
+            # Progress indicator
+            progress = (elapsed / duration) * 100
+            print(f"\r⏳ Progress: {progress:.1f}% | Samples: {samples_collected}/{total_samples} | "
+                  f"Time: {elapsed:.0f}/{duration}s", end='', flush=True)
+
+        # Start collection
+        start_time = time.time()
+
+        # Create animation
+        anim = animation.FuncAnimation(
+            plotter.fig,
+            lambda frame: [collect_data(frame)] + plotter.update(frame),
+            interval=interval * 1000,  # Convert to milliseconds
+            blit=False,
+            cache_frame_data=False
+        )
+
+        try:
+            plt.show()
+        except KeyboardInterrupt:
+            print("\n\n⚠️  Monitoring interrupted by user.")
 
     # Ensure we have some data
     if samples_collected == 0:
@@ -902,6 +934,12 @@ Examples:
         help='Output PDF file path (default: system_monitor_report.pdf)'
     )
 
+    parser.add_argument(
+        '--no-gui',
+        action='store_true',
+        help='Run in headless mode without GUI (useful for servers/SSH)'
+    )
+
     args = parser.parse_args()
 
     # Validate arguments
@@ -915,7 +953,7 @@ Examples:
 
     # Run monitoring
     try:
-        run_monitoring(args.duration, args.interval, args.output)
+        run_monitoring(args.duration, args.interval, args.output, args.no_gui)
     except KeyboardInterrupt:
         print("\n\n⚠️  Application terminated by user.")
     except Exception as e:
