@@ -6,6 +6,10 @@ pandas>=1.5.0          # Data manipulation and analysis
 matplotlib>=3.6.0      # Plotting and visualization
 numpy>=1.23.0          # Numerical computing
 
+# Web server dependencies
+Flask>=2.3.0           # Web framework
+flask-cors>=4.0.0      # CORS support for API
+
 # Optional GPU monitoring (install if you have NVIDIA GPU)
 # Uncomment the line below if you want GPU monitoring
 # GPUtil>=1.4.0        # NVIDIA GPU monitoring
