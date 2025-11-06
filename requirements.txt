@@ -1,0 +1,14 @@
+# System Resource Monitoring Application - Requirements
+
+# Core dependencies
+psutil>=5.9.0          # System and process utilities
+pandas>=1.5.0          # Data manipulation and analysis
+matplotlib>=3.6.0      # Plotting and visualization
+numpy>=1.23.0          # Numerical computing
+
+# Optional GPU monitoring (install if you have NVIDIA GPU)
+# Uncomment the line below if you want GPU monitoring
+# GPUtil>=1.4.0        # NVIDIA GPU monitoring
+
+# Note: GPUtil requires NVIDIA GPU drivers and nvidia-smi to be installed
+# If you don't have an NVIDIA GPU, the application will work without it
